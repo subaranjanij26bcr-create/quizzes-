@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Online Quiz Registration</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1b1b1f;--mute:#62626b;--line:#dcdad2;--acc:#3b4cca;--accink:#fff;--ok:#1f7a4d;--err:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141417;--card:#1f1f24;--ink:#f0eff4;--mute:#a3a3ad;--line:#33333b;--acc:#8c98ff;--accink:#10102a;--ok:#5fd39a;--err:#ff8a80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141417;--card:#1f1f24;--ink:#f0eff4;--mute:#a3a3ad;--line:#33333b;--acc:#8c98ff;--accink:#10102a;--ok:#5fd39a;--err:#ff8a80;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:28px 18px 48px}
+h1{font-size:1.9rem;margin:0 0 6px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+h2{font-size:1.05rem;margin:0 0 12px}
+.quiz{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;cursor:pointer}
+.quiz:has(input:checked){border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.quiz b{display:block}.quiz span{color:var(--mute);font-size:.9rem}
+label.f{display:block;font-weight:600;font-size:.9rem;margin:12px 0 4px}
+input[type=text],input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button{margin-top:16px;width:100%;padding:12px;border:0;border-radius:10px;background:var(--acc);color:var(--accink);font:inherit;font-weight:700;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+.msg{margin-top:12px;font-weight:600}.ok{color:var(--ok)}.err{color:var(--err)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>Online Quiz Registration</h1>
+  <p class="sub">Pick a quiz, enter your details, and you're in. One registration per person.</p>
+
+  <div id="done" class="card hide">
+    <h2>You're registered ✅</h2>
+    <p id="doneText" style="margin:0"></p>
+  </div>
+
+  <form id="form" class="card" novalidate>
+    <h2>1. Choose a quiz</h2>
+    <div id="quizzes"></div>
+    <h2 style="margin-top:18px">2. Your details</h2>
+    <label class="f" for="name">Full name</label>
+    <input id="name" type="text" autocomplete="name" maxlength="80">
+    <label class="f" for="email">Email</label>
+    <input id="email" type="email" autocomplete="email" maxlength="120">
+    <label class="f" for="team">Team name (optional)</label>
+    <input id="team" type="text" maxlength="60">
+    <button id="go" type="submit">Register</button>
+    <div id="msg" class="msg" role="status"></div>
+  </form>
+</main>
+
+<script>
+// Edit this list to match your real quizzes.
+var QUIZZES=[
+  {id:"gk",title:"General Knowledge Challenge",when:"Sat, 5 Dec 2026 · 6:00 PM IST"},
+  {id:"sci",title:"Science & Tech Showdown",when:"Sat, 12 Dec 2026 · 6:00 PM IST"},
+  {id:"cine",title:"Cinema & Pop Culture Night",when:"Sat, 19 Dec 2026 · 6:00 PM IST"}
+];
+
+var qEl=document.getElementById("quizzes"),
+    form=document.getElementById("form"),
+    msg=document.getElementById("msg"),
+    go=document.getElementById("go");
+
+QUIZZES.forEach(function(q,i){
+  var l=document.createElement("label");l.className="quiz";
+  var r=document.createElement("input");r.type="radio";r.name="quiz";r.value=q.id;if(i===0)r.checked=true;
+  var d=document.createElement("div"),b=document.createElement("b"),s=document.createElement("span");
+  b.textContent=q.title;s.textContent=q.when;
+  d.appendChild(b);d.appendChild(s);l.appendChild(r);l.appendChild(d);qEl.appendChild(l);
+});
+
+function titleOf(id){for(var i=0;i<QUIZZES.length;i++)if(QUIZZES[i].id===id)return QUIZZES[i].title;return id}
+function say(t,c){msg.textContent=t;msg.className="msg "+(c||"")}
+function showDone(d){
+  document.getElementById("doneText").textContent=d.name+", you're signed up for “"+titleOf(d.quiz)+"”. A confirmation will follow at "+d.email+".";
+  document.getElementById("done").classList.remove("hide");
+  form.classList.add("hide");
+}
+
+// Paste your form endpoint here (e.g. a Formspree, Getform or Google Apps Script URL).
+var ENDPOINT="https://formspree.io/f/YOUR_FORM_ID";
+var KEY="quiz-registered";
+
+try{var prev=JSON.parse(localStorage.getItem(KEY)||"null");if(prev)showDone(prev)}catch(e){}
+
+form.addEventListener("submit",async function(e){
+  e.preventDefault();
+  var name=document.getElementById("name").value.trim(),
+      email=document.getElementById("email").value.trim(),
+      team=document.getElementById("team").value.trim();
+  var quiz=(form.querySelector("input[name=quiz]:checked")||{}).value;
+  if(!name){say("Please enter your name.","err");return}
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){say("Please enter a valid email.","err");return}
+  go.disabled=true;say("Saving…");
+  try{
+    var d={name:name,email:email,team:team,quiz:quiz};
+    var r=await fetch(ENDPOINT,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify(d)
+    });
+    if(!r.ok)throw new Error("bad status");
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}
+    showDone(d);
+  }catch(err){
+    say("Registration failed. Please try again.","err");
+    go.disabled=false;
+  }
+});
+</script>
+</body>
+</html>
